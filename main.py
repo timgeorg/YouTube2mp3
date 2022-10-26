@@ -1,8 +1,6 @@
 import yt_dlp as yt
 from pytube import Playlist
 
-DL_PATH = r'F:\\Eigene Medien\\SHOOTINGS\\Reel-Workfolder\\full tracks\\'
-
 
 def readfile():
     file = open('link.txt', 'r')
