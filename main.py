@@ -21,7 +21,7 @@ def run(url):
     options = {
         'format': 'bestaudio/best',
         'keepvideo': False,
-        'outtmpl': DL_PATH + filename,  # cant handle "/", creates folder
+        'outtmpl': filename,  # cant handle "/", creates folder
     }
 
     with yt.YoutubeDL(options) as ydl:
@@ -30,21 +30,34 @@ def run(url):
     print("Download complete... {}".format(filename))
 
 
-def txt_runner():
-    print("Reading File..")
-    youtube_links = readfile()
-    print("Start downloading..")
-    for link in youtube_links:
-        run(link)
-    print("Finished downloading all.")
+def handle_input():
+    userinput = input("Please enter: \n"
+                      "- the YouTube link\n"
+                      "- the YouTube playlist-link\n"
+                      "- the link to a txt-file containing the links\n")
+
+    if 'youtube' in userinput:
+
+        if 'playlist' in userinput:
+            print("Downloading playlist")
+            yt_playlist = Playlist(userinput)
+            for video in yt_playlist.videos:
+                run(video.watch_url)
+            print("Finished downloading playlist.")
+        else:
+            print("Downloading single YouTube-video")
+            run(userinput)
+            print("Finished downloading playlist.")
+
+    elif '.txt' in userinput:
+        print("Reading File..")
+        youtube_links = readfile()
+        print("Start downloading..")
+        for link in youtube_links:
+            run(link)
+        print("Finished downloading all.")
+    else:
+        print("No valid input")
 
 
-def pl_linkrunner():
-    link = input("Please enter the playlist link: ")
-    yt_playlist = Playlist(link)
-    for video in yt_playlist.videos:
-        run(video.watch_url)
-    print("Finished downloading playlist.")
-
-
-pl_linkrunner()
+handle_input()
