@@ -1,5 +1,5 @@
 import yt_dlp as yt
-from pytube import Playlist
+from newscript import Playlist
 
 
 def readfile():
@@ -10,7 +10,7 @@ def readfile():
     return urls
 
 
-def run(url):
+def download_MP3(url):
     video_url = url
     video_info = yt.YoutubeDL().extract_info(
         url=video_url, download=False
@@ -20,6 +20,24 @@ def run(url):
         'format': 'bestaudio/best',
         'keepvideo': False,
         'outtmpl': filename,  # cant handle "/", creates folder
+    }
+
+    with yt.YoutubeDL(options) as ydl:
+        ydl.download([video_info['webpage_url']])
+
+    print("Download complete... {}".format(filename))
+
+
+def download_Video(url):
+    video_url = url
+    video_info = yt.YoutubeDL().extract_info(
+        url=video_url, download=False
+    )
+    filename = f"{video_info['title']}.mp4"
+    options = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'keepvideo': True,
+        'outtmpl': filename,
     }
 
     with yt.YoutubeDL(options) as ydl:
@@ -40,11 +58,11 @@ def handle_input():
             print("Downloading playlist")
             yt_playlist = Playlist(userinput)
             for video in yt_playlist.videos:
-                run(video.watch_url)
+                download_Video(video.watch_url)
             print("Finished downloading playlist.")
         else:
             print("Downloading single YouTube-video")
-            run(userinput)
+            download_Video(userinput)
             print("Finished downloading playlist.")
 
     elif '.txt' in userinput:
@@ -52,10 +70,10 @@ def handle_input():
         youtube_links = readfile()
         print("Start downloading..")
         for link in youtube_links:
-            run(link)
+            download_Video(link)
         print("Finished downloading all.")
     else:
         print("No valid input")
 
-
-handle_input()
+if __name__ == '__main__':
+    handle_input()
