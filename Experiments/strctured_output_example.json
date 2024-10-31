@@ -1,0 +1,52 @@
+{
+    "model": "gpt-4o-2024-08-06",
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a helpful math tutor."
+        },
+        {
+            "role": "user",
+            "content": "solve 8x + 31 = 2"
+        }
+    ],
+    "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "math_response",
+            "strict": true,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "steps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "explanation": {
+                                    "type": "string"
+                                },
+                                "output": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "explanation",
+                                "output"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "final_answer": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "steps",
+                    "final_answer"
+                ],
+                "additionalProperties": false
+            }
+        }
+    }
+}
