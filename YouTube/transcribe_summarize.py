@@ -77,12 +77,16 @@ def get_outline(description):
     )
 
     result = response.choices[0].message.content
+    result = result.replace("\n", "").rstrip().lstrip().replace("  ", "")
 
-    if not isinstance(result, dict):
+    try:
+        result = json.loads(result)
+        return result
+    except:
+        print("No outline found in description.")
         return None
 
-    result = result.replace("\n", "").rstrip().lstrip().replace("  ", "")
-    result = json.loads(result)
+    # TODO code below into separate function
 
     outlist = result["timestamps"]
 
