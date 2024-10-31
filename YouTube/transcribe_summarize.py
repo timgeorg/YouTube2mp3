@@ -77,6 +77,10 @@ def get_outline(description):
     )
 
     result = response.choices[0].message.content
+
+    if not isinstance(result, dict):
+        return None
+
     result = result.replace("\n", "").rstrip().lstrip().replace("  ", "")
     result = json.loads(result)
 
