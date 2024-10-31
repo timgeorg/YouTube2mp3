@@ -1,4 +1,7 @@
 import streamlit as st
+import re
+
+# from transcribe_summarize import summarize_youtube_video
 
 def summarize_youtube_video(url):
     # Placeholder function for summarizing the video
@@ -13,8 +16,17 @@ youtube_url = st.text_input("Enter YouTube URL:")
 # Button to generate summary
 if st.button("Generate Summary"):
     if youtube_url:
-        summary = summarize_youtube_video(youtube_url)
-        st.write("Summary:")
-        st.write(summary)
+        # Regular expression to check if the URL is a valid YouTube link
+        youtube_regex = re.compile(
+            r'^(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+$'
+        )
+
+        if not youtube_regex.match(youtube_url):
+            st.write("Please enter a valid YouTube URL.")
+        else:
+            summary = summarize_youtube_video(youtube_url)
+            st.write("Summary:")
+            st.write("Description available:")
+            st.write(summary)
     else:
         st.write("Please enter a valid YouTube URL.")
