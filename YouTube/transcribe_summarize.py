@@ -46,7 +46,7 @@ class YouTubeTranscribeSummarize(Logger):
             return None
 
 
-    def _convert_transcript_to_timedelta(data):
+    def _convert_transcript_to_timedelta(self, data):
         """
         Converts transcript data to include end time, minutes, seconds, and timestamp.
         Args:
@@ -120,6 +120,8 @@ class YouTubeTranscribeSummarize(Logger):
 
         # TODO code below into separate function
 
+    def _convert_timestamps(self, result):
+
         outlist = result["timestamps"]
 
         for item in outlist:
@@ -168,12 +170,16 @@ class YouTubeTranscribeSummarize(Logger):
             messages=[
                 {'role': 'system', 
                 'content': 
-                    'Summarize the following section of the video. Use the provided content to generate a summary of the section. Stay in the original language. Create Bullet Points.'},
+                    'Summarize the following section of the video. \
+                        Use the provided content to generate a summary of the section. \
+                        Stay in the original language. \
+                        Create Bullet Points, but dont shorten the idea of the content. Explain the topic briefly and not that they talk about it in the video. \
+                        Answer the question thats given in the topic or chapter title if available.'},
 
                 {'role': 'user', 'content': section}
             ],
             temperature=0.08,
-            max_tokens=2048,
+            max_tokens=512,
             top_p=1,
             frequency_penalty=0,
             presence_penalty=0,
@@ -188,7 +194,8 @@ def example_summary():
     desc = summary.get_description(url)
     print(desc)
     outline = summary.get_outline(desc)
-    sections = summary.link_content_to_outline(summary.get_transcript(url), outline)
+    outline = summary._convert_timestamps(outline)
+    sections = summary.link_content_to_outline(content=summary.get_transcript(url), outline=outline)
     print(sections)
     chap_summaries = []
     for section in sections:

@@ -24,7 +24,8 @@ if st.button("Generate Summary"):
         if not youtube_regex.match(youtube_url):
             st.write("Please enter a valid YouTube URL.")
         else:
-            summary = example_summary()
+            with st.spinner('Generating summary...'):
+                summary = example_summary()
             st.write("Summary:")
             st.write("Description available:")
             st.write(summary)
