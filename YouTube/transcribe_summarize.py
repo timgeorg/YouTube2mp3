@@ -96,7 +96,9 @@ class YouTubeTranscribeSummarize(Logger):
             messages=[
                 {'role': 'system', 
                 'content': 
-                    'If the following video description contains an outline, return the outline as a JSON list with "timestamp" and "topic". Else return nothing"'},
+                    'If the following video description contains an outline, return the outline as a JSON list with "timestamp" and "topic". \
+                        The one key containing this list shall be called "timestamps".\
+                        If there is no outline, return "No outline found in description.".'},
 
                 {'role': 'user', 'content': description}
             ],
@@ -114,8 +116,8 @@ class YouTubeTranscribeSummarize(Logger):
         try:
             result = json.loads(result)
             return result
-        except:
-            print("No outline found in description.")
+        except Exception as e:
+            print("No outline found in description: {e}")
             return None
 
         # TODO code below into separate function
@@ -174,7 +176,7 @@ class YouTubeTranscribeSummarize(Logger):
                         Use the provided content to generate a summary of the section. \
                         Stay in the original language. \
                         Create Bullet Points, but dont shorten the idea of the content. Explain the topic briefly and not that they talk about it in the video. \
-                        Answer the question thats given in the topic or chapter title if available.'},
+                        Answer the question thats given in the topic or chapter title if available. Put the topic as a heading. '},
 
                 {'role': 'user', 'content': section}
             ],
@@ -188,8 +190,8 @@ class YouTubeTranscribeSummarize(Logger):
         result = response.choices[0].message.content
         return result
     
-def example_summary():
-    url = 'https://www.youtube.com/watch?v=W_JfzXaYNDI'
+def example_summary(url):
+    # url = 'https://www.youtube.com/watch?v=W_JfzXaYNDI'
     summary = YouTubeTranscribeSummarize()
     desc = summary.get_description(url)
     print(desc)
@@ -199,7 +201,7 @@ def example_summary():
     print(sections)
     chap_summaries = []
     for section in sections:
-        chap_summary = summary.get_chapter_summary(section["content"])
+        chap_summary = summary.get_chapter_summary(str(section))
         print(chap_summary)
         chap_summaries.append(chap_summary)
 
@@ -210,7 +212,7 @@ def example_summary():
 
 if __name__ == '__main__':
 
-    example_summary()
+    example_summary(url='https://www.youtube.com/watch?v=W_JfzXaYNDI')
 
 
 
