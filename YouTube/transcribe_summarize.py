@@ -1,17 +1,18 @@
-from youtube_transcript_api import YouTubeTranscriptApi
-from datetime import timedelta
-import re
-from bs4 import BeautifulSoup
-import requests
-from dotenv import load_dotenv # pip install python-dotenv
+# Native Libraries
 import os
-# from openai import AzureOpenAI
-from openai import OpenAI
+import re
+import sys
 import json
+import requests
+from datetime import datetime, timedelta
+# External Libraries
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv # pip install python-dotenv
+from youtube_transcript_api import YouTubeTranscriptApi
+from openai import OpenAI # OR: from openai import AzureOpenAI
 
-import sys, os
+# User-defined Libraries
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from Utilities.logger import Logger
 
 
@@ -287,12 +288,18 @@ def example_summary(url):
         #     print(chap_summary)
         #     chap_summaries.append(chap_summary)
 
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{obj.channel}_Summary_{current_time}.md"
 
     # Write the summary into a markdown file
+    print("Writing summary to file ...")
+    with open(filename, "w") as file:
+        for summary in chap_summaries:
+            file.write(summary + "\n\n")
+    print(f"Summary successfully written to {filename}")
 
     print(chap_summaries)
     return chap_summaries
-
 
 
 if __name__ == '__main__':
