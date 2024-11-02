@@ -19,7 +19,7 @@ from Utilities.logger import Logger
 class YouTubeVideo():
     def __init__(self, url):
         self.url = url
-        self.logger = Logger().create_logger(self.__class__.__name__, log_level=20) 
+        self.logger = Logger().create_logger(name=self.__class__.__name__) 
         self.logger.info(f"Creating YouTubeVideo object for URL: {url}")
         self.soup = self._get_metadata(url)
         self.title = self._get_title()
@@ -245,7 +245,8 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
                         Use the provided content to generate a summary of the section. \
                         Stay in the original language. \
                         Create Bullet Points, but dont shorten the idea of the content. Explain the topic briefly and not that they talk about it in the video. \
-                        Answer the question thats given in the topic or chapter title if available. Put the topic as a heading. '},
+                        Answer the question thats given in the topic or chapter title if available. Put the topic with timestamp as a heading.\
+                        Every Heading should be a markdown ## heading. '},
 
                 {'role': 'user', 'content': section}
             ],
@@ -283,10 +284,10 @@ def example_summary(url):
         sections = obj.link_content_to_outline(content=obj.transcript, outline=outline)
         chap_summaries = []
 
-        # for section in sections:
-        #     chap_summary = obj.get_chapter_summary(str(section))
-        #     print(chap_summary)
-        #     chap_summaries.append(chap_summary)
+        for section in sections:
+            chap_summary = obj.get_chapter_summary(str(section))
+            print(chap_summary)
+            chap_summaries.append(chap_summary)
 
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{obj.channel}_Summary_{current_time}.md"

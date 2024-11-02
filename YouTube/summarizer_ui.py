@@ -3,10 +3,6 @@ import re
 
 from transcribe_summarize import example_summary
 
-def summarize_youtube_video(url):
-    # Placeholder function for summarizing the video
-    # Replace this with actual summarization logic
-    return "This is a summary of the video."
 
 st.title("YouTube Video Summarizer")
 
@@ -28,6 +24,7 @@ if st.button("Generate Summary"):
                 summary = example_summary(youtube_url)
             st.write("Summary:")
             st.write("Description available:")
-            st.write(summary)
+            for chapter in summary:
+                st.write(chapter)
     else:
         st.write("Please enter a valid YouTube URL.")
