@@ -15,35 +15,120 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Utilities.logger import Logger
 
 
-class YouTubeTranscribeSummarize(Logger):
+class YouTubeVideo():
+    def __init__(self, url):
+        self.url = url
+        self.logger = Logger().create_logger(self.__class__.__name__, log_level=20) 
+        self.logger.info(f"Creating YouTubeVideo object for URL: {url}")
+        self.soup = self._get_metadata(url)
+        self.title = self._get_title()
+        self.channel = self._get_channel()
+        self.description = self._get_description()
+        self.transcript = self._get_transcript()
 
-    def __init__(self, logging_level='DEBUG') -> None:
-        self.create_logger(logging_level)
+    
+    def _get_metadata(self, url):
+        """
+        Fetches and parses the metadata from the given URL.
+        This method sends a GET request to the specified URL, retrieves the HTML content,
+        and parses it using BeautifulSoup to extract metadata.
+        Args:
+            url (str): The URL from which to fetch the metadata.
+        Returns:
+            BeautifulSoup: A BeautifulSoup object containing the parsed HTML content.
+        Raises:
+            requests.exceptions.HTTPError: If the HTTP request returned an unsuccessful status code.
+        """
 
-    def get_transcript(self, url='https://www.youtube.com/watch?v=W_JfzXaYNDI'):
+        self.logger.info(f"Getting metadata from {url}")
+        response = requests.get(url)
+        response.raise_for_status()  # Ensure the request was successful
+        html = response.content
+        soup = BeautifulSoup(html, features="html.parser")
+        self.logger.info(f"Successfully retrieved metadata from {url}")
+        return soup
+    
+
+    def _get_title(self):
+        """
+        Retrieves the title of a YouTube video.
+        Args:
+            url (str): The URL of the YouTube video.
+        Returns:
+            str: The title of the YouTube video if successful.
+            None: If an error occurs during the retrieval process.
+        Raises:
+            Exception: If an error occurs while retrieving the title.
+        """
+
+        self.logger.info(f"Getting title ...")
+        title_tag = self.soup.find("meta", property="og:title")
+        title = title_tag["content"] if title_tag else "Title not found"
+        self.logger.info(f"Title: {title}")
+        return title
+    
+
+    def _get_channel(self):
+        """
+        Extracts the channel name from the provided BeautifulSoup object.
+        Args:
+            soup (BeautifulSoup): A BeautifulSoup object containing the parsed HTML of a YouTube page.
+        Returns:
+            str: The name of the channel if found, otherwise "Channel name not found".
+        """
+        self.logger.info(f"Getting channel ...")
+        channel_tag = self.soup.find("link", itemprop="name")
+        channel_name = channel_tag["content"] if channel_tag else "Channel name not found"
+        self.logger.info(f"Channel: {channel_name}")
+        return channel_name
+    
+
+    def _get_description(self):
+        """
+        Extracts the description from a YouTube video page.
+        Args:
+            url (str): The URL of the YouTube video.
+        Returns:
+            str: The description of the YouTube video.
+        """
+
+        description_regex = re.compile('(?<=shortDescription":").*(?=","isCrawlable)')
+        description = description_regex.findall(str(self.soup))[0].replace('\\n','\n')
+        return description
+
+
+    def _get_transcript(self):
         """
         Retrieves the transcript of a YouTube video and converts it to a timestamped format.
         Args:
-            url (str): The URL of the YouTube video. Defaults to 'https://www.youtube.com/watch?v=W_JfzXaYNDI'.
+            url (str): The URL of the YouTube video.
         Returns:
             list: A list of dictionaries containing the transcript with timestamps if successful.
             None: If an error occurs during the retrieval process.
         Raises:
             Exception: If an error occurs while retrieving the transcript.
         """
-        self.logger.info(f"Getting transcript from {url}")
 
-        video_id = url.split('=')[-1]
+        self.logger.info(f"Getting transcript ...")
+
+        video_id = self.url.split('=')[-1]
 
         try:
             data = YouTubeTranscriptApi.get_transcript(video_id, languages=("de", "en"))
             timestamped_data = self._convert_transcript_to_timedelta(data)
-            self.logger.info(f"Successfully retrieved transcript from {url}")
+            self.logger.info(f"Successfully retrieved transcript")
             return timestamped_data
         
         except Exception as e:
             self.logger.error(f"An error occurred while retrieving the transcript: {e}")
             return None
+
+
+
+class YouTubeTranscribeSummarize(YouTubeVideo):
+
+    def __init__(self, url):
+        super().__init__(url)
 
 
     def _convert_transcript_to_timedelta(self, data):
@@ -69,21 +154,6 @@ class YouTubeTranscribeSummarize(Logger):
             item["timestamp"] = timedelta(minutes=item["minutes"], seconds=item["seconds"])
 
         return data
-
-
-    def get_description(self, url):
-        """
-        Extracts the description from a YouTube video page.
-        Args:
-            url (str): The URL of the YouTube video.
-        Returns:
-            str: The description of the YouTube video.
-        """
-        self.logger.info(f"Getting description from {url}")
-        soup = BeautifulSoup(requests.get(url).content, features="html.parser")
-        pattern = re.compile('(?<=shortDescription":").*(?=","isCrawlable)')
-        description = pattern.findall(str(soup))[0].replace('\\n','\n')
-        return description
 
 
     def get_outline(self, description):
@@ -115,12 +185,12 @@ class YouTubeTranscribeSummarize(Logger):
 
         try:
             result = json.loads(result)
+            self.logger.info(f"Outline found in description. Returning outline.")
             return result
         except Exception as e:
-            print("No outline found in description: {e}")
+            self.logger.info(f"No outline found in description: {e}")
             return None
 
-        # TODO code below into separate function
 
     def _convert_timestamps(self, result):
 
@@ -158,8 +228,6 @@ class YouTubeTranscribeSummarize(Logger):
         for item in outline:
             item["content"] = " ".join(item["content"])
 
-        print(outline)
-
         return outline
 
 
@@ -189,21 +257,38 @@ class YouTubeTranscribeSummarize(Logger):
 
         result = response.choices[0].message.content
         return result
+
     
 def example_summary(url):
-    # url = 'https://www.youtube.com/watch?v=W_JfzXaYNDI'
-    summary = YouTubeTranscribeSummarize()
-    desc = summary.get_description(url)
-    print(desc)
-    outline = summary.get_outline(desc)
-    outline = summary._convert_timestamps(outline)
-    sections = summary.link_content_to_outline(content=summary.get_transcript(url), outline=outline)
-    print(sections)
-    chap_summaries = []
-    for section in sections:
-        chap_summary = summary.get_chapter_summary(str(section))
-        print(chap_summary)
-        chap_summaries.append(chap_summary)
+    obj = YouTubeTranscribeSummarize(url=url)
+    desc = obj.description
+    outline = obj.get_outline(desc)
+
+    if outline is None:
+        pass
+        # no outline, but make a summary anyway
+
+    if outline is None:
+        pass
+        # check how long the transcript is and create sections if too long
+
+    # TODO: make a summary of a short video with no outline
+
+    # TODO: make a summary of a long video with no outline (sections)
+
+
+    if outline:
+        outline = obj._convert_timestamps(outline)
+        sections = obj.link_content_to_outline(content=obj.transcript, outline=outline)
+        chap_summaries = []
+
+        # for section in sections:
+        #     chap_summary = obj.get_chapter_summary(str(section))
+        #     print(chap_summary)
+        #     chap_summaries.append(chap_summary)
+
+
+    # Write the summary into a markdown file
 
     print(chap_summaries)
     return chap_summaries
