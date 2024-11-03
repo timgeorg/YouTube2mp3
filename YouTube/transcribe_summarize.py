@@ -186,8 +186,12 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
 
         try:
             result = json.loads(result)
-            self.logger.info(f"Outline found in description. Returning outline.")
-            return result
+            if not result["timestamps"]:
+                self.logger.info(f"No outline found in description.")
+                return None
+            else:
+                self.logger.info(f"Outline found in description. Returning outline.")
+                return result
         except Exception as e:
             self.logger.info(f"No outline found in description: {e}")
             return None
@@ -231,10 +235,51 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
 
         return outline
 
+    def link_transcript_without_outline(self, content):
+
+        # get max length of content
+        content_length = content[-1]["timestamp"] # get timedelta object of last entry
+
+        total_duration = content_length.total_seconds() / 60  # Convert total duration to minutes
+
+        # Determine chunk length based on total duration
+        if total_duration <= 15:
+            chunk_length = timedelta(minutes=3)
+        elif 15 < total_duration <= 45:
+            chunk_length = timedelta(minutes=5)
+        elif 45 < total_duration <= 90:
+            chunk_length = timedelta(minutes=10)
+        else:
+            chunk_length = timedelta(minutes=15)
+            
+        sections = []
+        section = {"timestamp": content[0]["timestamp"], "content": []}
+
+        for entry in content:
+            if entry["timestamp"] < section["timestamp"] + chunk_length:
+                section["content"].append(entry["text"])
+            else:
+                section["content"] = " ".join(section["content"])
+                sections.append(section)
+                section = {"timestamp": entry["timestamp"], "content": [entry["text"]]}
+
+        section["content"] = " ".join(section["content"])
+        sections.append(section)
+
+        for section in sections:
+            section["topic"] = f"Chapter {sections.index(section) + 1}"
+            section["start_time"] = str(section["timestamp"])
+            section_length_words = len(section["content"].split())
+            print("Section length: ", section_length_words)
+
+        return sections
+
 
     def get_chapter_summary(self, section, model='gpt-4o-mini'):
 
         client = OpenAI(api_key=os.getenv('OPENAI_API'))
+
+        self.logger.info(f"Getting summary for section: {section["topic"]}")
 
         response = client.chat.completions.create(
             model=model,
@@ -245,10 +290,13 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
                         Use the provided content to generate a summary of the section. \
                         Stay in the original language. \
                         Create Bullet Points, but dont shorten the idea of the content. Explain the topic briefly and not that they talk about it in the video. \
-                        Answer the question thats given in the topic or chapter title if available. Put the topic with timestamp as a heading.\
-                        Every Heading should be a markdown ## heading. '},
+                        If they talk about the 5 things or the 9 types or something like that, list them. \
+                        Answer the question thats given in the topic or chapter title if available. \
+                        Put the topic with timestamp (in h, min, sec) in the format "hh:mm:ss" as a heading.\
+                        Every Heading should be a markdown ## heading. If there is no heading (eg. Chapter 1), create one out of the content provided. \
+                        Try to keep it as short as possible, but as long as necessary. '},
 
-                {'role': 'user', 'content': section}
+                {'role': 'user', 'content': str(section)}
             ],
             temperature=0.08,
             max_tokens=512,
@@ -259,6 +307,58 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
 
         result = response.choices[0].message.content
         return result
+    
+
+    def get_minimal_chapter_summary(self, section, model='gpt-4o-mini'):
+
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {'role': 'system', 
+                'content': 
+                    'Summarize the following chapter of a podcast as short as possible in max. 1-2 bullet points.\
+                        Stay in the original language. Keep the heading.'},
+
+                {'role': 'user', 'content': str(section)}
+            ],
+            temperature=0.08,
+            max_tokens=256,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+        )
+
+        result = response.choices[0].message.content
+        return result
+
+
+    def get_unified_summary(self, sections):
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+        response = client.chat.completions.create(
+
+            model='gpt-4o-mini',
+            messages=[
+                {'role': 'system', 
+                'content': 
+                    'Summarize the following outline of a podcast. \
+                        Do not only list the topics they talk about, but briefly explain every idea you mention in the summary. \
+                        Still try to keep it as short as possible. Use bullet points if possible.'},
+
+                {'role': 'user', 'content': str(sections)}
+            ],
+            temperature=0.08,
+            max_tokens=512,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+        )
+        
+        result = response.choices[0].message.content
+        return result
+
 
     
 def example_summary(url):
@@ -266,9 +366,17 @@ def example_summary(url):
     desc = obj.description
     outline = obj.get_outline(desc)
 
+    sections = []
+
     if outline is None:
-        pass
-        # no outline, but make a summary anyway
+        transcript = obj.transcript
+        transcript_length = len(transcript)
+        print(f"Transcript length: {transcript_length}")
+        # outline = obj._convert_timestamps(transcript) # only if outline is found in description
+        print(outline)
+        sections = obj.link_transcript_without_outline(transcript)
+        outline = "Synthetic"
+
 
     if outline is None:
         pass
@@ -280,32 +388,49 @@ def example_summary(url):
 
 
     if outline:
-        outline = obj._convert_timestamps(outline)
-        sections = obj.link_content_to_outline(content=obj.transcript, outline=outline)
+        if outline != "Synthetic":
+            outline = obj._convert_timestamps(outline)
+            sections = obj.link_content_to_outline(content=obj.transcript, outline=outline)
         chap_summaries = []
 
         for section in sections:
-            chap_summary = obj.get_chapter_summary(str(section))
-            print(chap_summary)
+            chap_summary = obj.get_chapter_summary(section)
             chap_summaries.append(chap_summary)
 
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{obj.channel}_Summary_{current_time}.md"
+    long_summary_filename = f"{obj.channel}_Summary_{current_time}.md"
+    short_summary_filename = f"{obj.channel}_Short_Summary_{current_time}.md"
+    unified_summary_filename = f"{obj.channel}_Unified_Summary_{current_time}.md"
+
+    short_chapters = []
+    for chapter in chap_summaries:
+        short_chapter = obj.get_minimal_chapter_summary(chapter)
+        short_chapters.append(short_chapter)
+
+    # Concatenate all short chapters into one string
+    concatenated_short_chapters = "\n\n".join(short_chapters)
+    with open(short_summary_filename, "w", encoding='utf-8') as file:
+        file.write(concatenated_short_chapters)
+
+    # Get a unified summary of all chapters
+    unified_summary = obj.get_unified_summary(concatenated_short_chapters)
+    with open(unified_summary_filename, "w", encoding='utf-8') as file:
+        file.write(unified_summary)
 
     # Write the summary into a markdown file
     print("Writing summary to file ...")
-    with open(filename, "w") as file:
+    with open(long_summary_filename, "w", encoding='utf-8') as file:
         for summary in chap_summaries:
             file.write(summary + "\n\n")
-    print(f"Summary successfully written to {filename}")
+    print(f"Summary successfully written to {long_summary_filename}")
 
-    print(chap_summaries)
     return chap_summaries
 
 
 if __name__ == '__main__':
 
-    example_summary(url='https://www.youtube.com/watch?v=W_JfzXaYNDI')
+    example_summary(url='https://www.youtube.com/watch?v=zA_35kpjHrQ') #no outline
+    # example_summary(url='https://www.youtube.com/watch?v=X8Hw8zeCDTA') #outline
 
 
 
