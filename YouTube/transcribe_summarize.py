@@ -189,6 +189,13 @@ class YouTubeTranscribeSummarize(YouTubeVideo):
             if not result["timestamps"]:
                 self.logger.info(f"No outline found in description.")
                 return None
+            elif type(result["timestamps"]) == str:
+                self.logger.info(f"No Outline found in description. Creating synthetic outline.")
+                return None
+            
+            elif type(result["timestamps"]) == list:
+                self.logger.info(f"Outline found in description. Returning outline.")
+                return result
             else:
                 self.logger.info(f"Outline found in description. Returning outline.")
                 return result
@@ -429,8 +436,8 @@ def example_summary(url):
 
 if __name__ == '__main__':
 
-    example_summary(url='https://www.youtube.com/watch?v=zA_35kpjHrQ') #no outline
-    # example_summary(url='https://www.youtube.com/watch?v=X8Hw8zeCDTA') #outline
+    url = input("\n\nPlease enter the YouTube video URL: ")
+    example_summary(url=url)
 
 
 
