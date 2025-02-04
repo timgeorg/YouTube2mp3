@@ -1,5 +1,4 @@
 import yt_dlp as yt
-from newscript import Playlist
 
 
 def readfile():
@@ -47,31 +46,12 @@ def download_Video(url):
 
 
 def handle_input():
-    userinput = input("Please enter: \n"
-                      "- the YouTube link\n"
-                      "- the YouTube playlist-link\n"
-                      "- the link to a txt-file containing the links\n")
+    userinput = input("Please enter the YouTube link: \n")
 
     if 'youtube' in userinput:
-
-        if 'playlist' in userinput:
-            print("Downloading playlist")
-            yt_playlist = Playlist(userinput)
-            for video in yt_playlist.videos:
-                download_Video(video.watch_url)
-            print("Finished downloading playlist.")
-        else:
-            print("Downloading single YouTube-video")
-            download_Video(userinput)
-            print("Finished downloading playlist.")
-
-    elif '.txt' in userinput:
-        print("Reading File..")
-        youtube_links = readfile()
-        print("Start downloading..")
-        for link in youtube_links:
-            download_Video(link)
-        print("Finished downloading all.")
+        print("Downloading single YouTube video as MP3")
+        download_MP3(userinput)
+        print("Finished downloading MP3.")
     else:
         print("No valid input")
 

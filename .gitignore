@@ -6,3 +6,6 @@ __pycache__/
 .idea/
 .env
 *.log
+.vscode/
+.pytest_cache/
+.idea/
